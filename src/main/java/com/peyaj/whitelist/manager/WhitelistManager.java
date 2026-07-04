@@ -184,7 +184,15 @@ public class WhitelistManager {
 
         // 4. Auto-detect Bedrock prefix fallback (if Floodgate configuration prefix is different or not fully resolved)
         if (plugin.getConfig().getBoolean("auto-detect-bedrock-prefix", true)) {
-            if (name.length() > 1 && !Character.isLetterOrDigit(name.charAt(0))) {
+            boolean isBedrock = floodgate.isBedrockPlayer(uuid);
+            boolean isDummy = floodgate.getClass().getSimpleName().contains("Dummy");
+            
+            char firstChar = name.charAt(0);
+            // Restrict prefix character options to standard Geyser defaults ('.' or '*') to avoid arbitrary bypasses (like '_')
+            boolean isAllowedPrefix = firstChar == '.' || firstChar == '*';
+            boolean canBypass = isBedrock || (isDummy && isAllowedPrefix);
+
+            if (canBypass && name.length() > 1 && !Character.isLetterOrDigit(firstChar)) {
                 // Strip the prefix character and check
                 String stripped = name.substring(1).toLowerCase();
                 if (whitelistedNames.contains(stripped)) {
