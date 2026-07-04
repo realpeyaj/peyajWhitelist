@@ -101,7 +101,7 @@ public class PeyajWhitelist extends JavaPlugin {
     private void printBanner() {
         boolean floodgateActive = getServer().getPluginManager().isPluginEnabled("Floodgate");
         boolean luckpermsActive = getServer().getPluginManager().isPluginEnabled("LuckPerms");
-        getLogger().info("▲ PeyajWhitelist v4.0");
+        getLogger().info("▲ PeyajWhitelist v4.1");
         getLogger().info("▪ Whitelist: " + (whitelistEnabled ? "§aEnabled" : "§cDisabled"));
         getLogger().info("▪ Maintenance: " + (maintenanceMode ? "§cEnabled" : "§aDisabled"));
         getLogger().info("▪ Crossplay: " + (floodgateActive ? "§aActive (Geyser/Floodgate)" : "§7Inactive"));
@@ -295,7 +295,7 @@ public class PeyajWhitelist extends JavaPlugin {
         }
 
         com.google.gson.JsonObject footer = new com.google.gson.JsonObject();
-        footer.addProperty("text", "PeyajWhitelist v4.0");
+        footer.addProperty("text", "PeyajWhitelist v4.1");
         embed.add("footer", footer);
 
         embeds.add(embed);

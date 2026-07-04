@@ -1,6 +1,6 @@
 # PeyajWhitelist
 
-A robust, crossplay-compatible whitelist plugin for Minecraft 1.21.x to 26.2. Supports Bedrock Edition players joining via GeyserMC/Floodgate.
+A robust, crossplay-compatible whitelist plugin supporting Minecraft 1.13.x to 1.21.x (and older/newer versions), compiled for Java 17+. Supports Bedrock Edition players joining via GeyserMC/Floodgate.
 
 ## Features
 
