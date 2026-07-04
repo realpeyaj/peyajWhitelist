@@ -221,6 +221,15 @@ public class PeyajWhitelist extends JavaPlugin {
         if (!isReject && !getConfig().getBoolean("discord-webhook.notify-on-whitelist", true)) return;
 
         com.google.gson.JsonObject payload = new com.google.gson.JsonObject();
+        
+        String webhookName = getConfig().getString("discord-webhook.username", "PeyajWhitelist");
+        String avatarUrl = getConfig().getString("discord-webhook.avatar-url", "");
+
+        payload.addProperty("username", webhookName);
+        if (avatarUrl != null && !avatarUrl.trim().isEmpty() && !avatarUrl.contains("YOUR_AVATAR_IMAGE_URL_HERE")) {
+            payload.addProperty("avatar_url", avatarUrl);
+        }
+
         com.google.gson.JsonArray embeds = new com.google.gson.JsonArray();
         com.google.gson.JsonObject embed = new com.google.gson.JsonObject();
 

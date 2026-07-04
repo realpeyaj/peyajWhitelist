@@ -37,6 +37,10 @@ debug: false
 discord-webhook:
   enabled: false
   url: "YOUR_DISCORD_WEBHOOK_URL_HERE"
+  # Custom display name for the webhook bot
+  username: "PeyajWhitelist"
+  # Custom avatar image URL for the webhook bot (e.g. Imgur link)
+  avatar-url: "YOUR_AVATAR_IMAGE_URL_HERE"
   # Notify when a connection is rejected by the whitelist
   notify-on-reject: true
   # Notify when a player is successfully whitelisted by an admin
