@@ -11,6 +11,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.StringUtil;
 
 import java.util.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.Reader;
 
 public class WhitelistCommand implements CommandExecutor, TabCompleter {
 
@@ -57,6 +60,7 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                 // Asynchronous/Safe add
                 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                     String result = manager.addPlayer(addTarget);
+                    plugin.getAuditLogger().log("ADDED", String.format("%s by %s", addTarget, sender.getName()));
                     plugin.getServer().getScheduler().runTask(plugin, () -> sender.sendMessage(PREFIX + result));
                 });
                 break;
@@ -70,6 +74,7 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(PREFIX + "§eRemoving §6" + removeTarget + " §efrom the whitelist...");
                 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                     String result = manager.removePlayer(removeTarget);
+                    plugin.getAuditLogger().log("REMOVED", String.format("%s by %s", removeTarget, sender.getName()));
                     plugin.getServer().getScheduler().runTask(plugin, () -> sender.sendMessage(PREFIX + result));
                 });
                 break;
@@ -106,6 +111,7 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                     return true;
                 }
                 manager.clearWhitelist();
+                plugin.getAuditLogger().log("SYSTEM", String.format("Whitelist cleared by %s", sender.getName()));
                 sender.sendMessage(PREFIX + "§aSuccessfully cleared all entries from the whitelist.");
                 break;
 
@@ -144,6 +150,7 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(PREFIX + "§cNo matching pending request found. Adding §6" + targetArg + " §eas a new whitelist entry...");
                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                         String result = manager.addPlayer(targetArg);
+                        plugin.getAuditLogger().log("ADDED", String.format("%s by %s (Approved from empty queue)", targetArg, sender.getName()));
                         plugin.getServer().getScheduler().runTask(plugin, () -> {
                             sender.sendMessage(PREFIX + result);
                             // Simple webhook notify
@@ -163,6 +170,8 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                             manager.addPlayer(finalReq.getXuid());
                         }
 
+                        plugin.getAuditLogger().log("ADDED", String.format("%s (%s) by %s (Approved connection request)", finalReq.getName(), finalReq.getPlatform(), sender.getName()));
+
                         plugin.getServer().getScheduler().runTask(plugin, () -> {
                             sender.sendMessage(PREFIX + "§aSuccessfully whitelisted §e" + finalReq.getName() + " §7(" + finalReq.getPlatform() + ") §aand linked their UUID/XUID.");
                             // Rich webhook notification
@@ -170,6 +179,88 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                         });
                     });
                 }
+                break;
+
+            case "maintenance":
+                if (args.length < 2) {
+                    sender.sendMessage(PREFIX + "§eMaintenance Mode: " + (plugin.isMaintenanceMode() ? "§cENABLED" : "§aDISABLED"));
+                    return true;
+                }
+                String state = args[1].toLowerCase();
+                if (!state.equals("on") && !state.equals("off")) {
+                    sender.sendMessage(PREFIX + "§cUsage: /" + label + " maintenance <on|off>");
+                    return true;
+                }
+                boolean active = state.equals("on");
+                plugin.setMaintenanceMode(active);
+                sender.sendMessage(PREFIX + "§aMaintenance Mode has been set to " + (active ? "§cENABLED" : "§aDISABLED") + "§a.");
+                break;
+
+            case "stats":
+                sender.sendMessage(PREFIX + "§7--- §dWhitelist Statistics §7---");
+                int namesSize = manager.getWhitelistedNames().size();
+                int uuidsSize = manager.getWhitelistedUuids().size();
+                int xuidsSize = manager.getWhitelistedXuids().size();
+                int totalSize = namesSize + uuidsSize + xuidsSize;
+
+                sender.sendMessage("§eTotal Entries: §f" + totalSize);
+                sender.sendMessage("§eJava Players (UUIDs): §f" + uuidsSize);
+                sender.sendMessage("§eBedrock Players (XUIDs): §f" + xuidsSize);
+                sender.sendMessage("§eCustom Usernames: §f" + namesSize);
+                break;
+
+            case "audit":
+                String filter = args.length > 1 ? args[1] : null;
+                sender.sendMessage(PREFIX + "§7--- §dAudit Log Trail (Latest 10) §7---");
+                List<String> auditTrail = plugin.getAuditLogger().getRecentLogs(10, filter);
+                if (auditTrail.isEmpty()) {
+                    sender.sendMessage("  §fNo log history found.");
+                } else {
+                    for (String line : auditTrail) {
+                        // Premium color highlights
+                        String coloredLine = line
+                                .replace("[ADDED]", "§a[ADDED]§f")
+                                .replace("[REMOVED]", "§c[REMOVED]§f")
+                                .replace("[MAINTENANCE]", "§6[MAINTENANCE]§f")
+                                .replace("[KICK]", "§4[KICK]§f")
+                                .replace("[SYSTEM]", "§3[SYSTEM]§f");
+                        sender.sendMessage("  " + coloredLine);
+                    }
+                }
+                break;
+
+            case "import-vanilla":
+                sender.sendMessage(PREFIX + "§eLocating vanilla whitelist.json...");
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    File file = new File("whitelist.json");
+                    if (!file.exists()) {
+                        plugin.getServer().getScheduler().runTask(plugin, () -> sender.sendMessage(PREFIX + "§cError: whitelist.json was not found in the server root."));
+                        return;
+                    }
+
+                    try (Reader reader = new FileReader(file)) {
+                        com.google.gson.JsonArray array = com.google.gson.JsonParser.parseReader(reader).getAsJsonArray();
+                        int importedCount = 0;
+                        for (com.google.gson.JsonElement el : array) {
+                            com.google.gson.JsonObject obj = el.getAsJsonObject();
+                            if (obj.has("name") && obj.has("uuid")) {
+                                String targetName = obj.get("name").getAsString();
+                                String targetUuid = obj.get("uuid").getAsString();
+
+                                manager.addPlayer(targetName);
+                                manager.addPlayer(targetUuid);
+                                importedCount++;
+                            }
+                        }
+                        final int finalCount = importedCount;
+                        plugin.getServer().getScheduler().runTask(plugin, () -> {
+                            sender.sendMessage(PREFIX + "§aSuccessfully imported §e" + finalCount + " §aplayers from vanilla whitelist.");
+                            plugin.getAuditLogger().log("SYSTEM", String.format("Imported %d players from vanilla whitelist.json (Executor: %s)", finalCount, sender.getName()));
+                        });
+                    } catch (Exception e) {
+                        plugin.getServer().getScheduler().runTask(plugin, () -> sender.sendMessage(PREFIX + "§cParsing error: " + e.getMessage()));
+                    }
+                });
                 break;
 
             default:
@@ -190,6 +281,10 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e/" + label + " reload §7- Reload config files");
         sender.sendMessage("§e/" + label + " pending §7- View recent connection rejection attempts");
         sender.sendMessage("§e/" + label + " approve <index|name> §7- Whitelist and link a pending player");
+        sender.sendMessage("§e/" + label + " maintenance <on|off> §7- Toggle server maintenance mode");
+        sender.sendMessage("§e/" + label + " stats §7- Show database counts and analytics");
+        sender.sendMessage("§e/" + label + " audit [player] §7- Check the database audit trail logs");
+        sender.sendMessage("§e/" + label + " import-vanilla §7- Bulk-import standard whitelist.json");
         sender.sendMessage("§e/" + label + " clear §7- Clear the entire whitelist");
     }
 
@@ -201,7 +296,7 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
 
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
-            List<String> subCommands = Arrays.asList("on", "off", "add", "remove", "list", "reload", "clear", "pending", "approve");
+            List<String> subCommands = Arrays.asList("on", "off", "add", "remove", "list", "reload", "clear", "pending", "approve", "maintenance", "stats", "audit", "import-vanilla");
             StringUtil.copyPartialMatches(args[0], subCommands, completions);
             Collections.sort(completions);
             return completions;
@@ -232,6 +327,9 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                 }
                 StringUtil.copyPartialMatches(args[1], pendingNames, completions);
                 Collections.sort(completions);
+                return completions;
+            } else if (subCommand.equals("maintenance")) {
+                StringUtil.copyPartialMatches(args[1], Arrays.asList("on", "off"), completions);
                 return completions;
             } else if (subCommand.equals("clear")) {
                 StringUtil.copyPartialMatches(args[1], Collections.singletonList("confirm"), completions);

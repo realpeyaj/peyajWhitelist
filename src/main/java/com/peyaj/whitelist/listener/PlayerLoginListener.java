@@ -28,7 +28,20 @@ public class PlayerLoginListener implements Listener {
             plugin.getLogger().info(String.format("Processing connection request: %s (%s)", name, uuid));
         }
 
-        // Check if player has LuckPerms bypass permission
+        // 1. Maintenance Mode Gate Check
+        if (plugin.isMaintenanceMode()) {
+            boolean isOp = org.bukkit.Bukkit.getOfflinePlayer(uuid).isOp();
+            boolean hasBypass = plugin.getLuckPermsHook().hasBypassPermission(uuid) || isOp;
+            if (!hasBypass) {
+                String kickMsg = plugin.getConfig().getString("kick-message-maintenance", 
+                        "&cThe server is currently under maintenance!");
+                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, translateColors(kickMsg));
+                plugin.getAuditLogger().log("KICK", String.format("Denied %s (%s) - Server is in maintenance mode.", name, uuid));
+                return;
+            }
+        }
+
+        // 2. Check if player has LuckPerms whitelist bypass permission
         if (plugin.getConfig().getBoolean("luckperms-bypass", true) && plugin.getLuckPermsHook().hasBypassPermission(uuid)) {
             if (plugin.isVerbose()) {
                 plugin.getLogger().info("[PeyajWhitelist Debug] Allowed connection bypass for: " + name + " (has bypass permission)");
@@ -36,7 +49,7 @@ public class PlayerLoginListener implements Listener {
             return;
         }
 
-        // Check if player is whitelisted
+        // 3. Check if player is whitelisted
         if (!plugin.getWhitelistManager().isWhitelisted(uuid, name)) {
             // Gather details for pending request queue and webhook
             boolean isBedrock = plugin.getFloodgateHook().isBedrockPlayer(uuid);
@@ -45,6 +58,9 @@ public class PlayerLoginListener implements Listener {
 
             // Register rejected request
             plugin.addPendingRequest(new com.peyaj.whitelist.model.PendingRequest(name, uuid, xuid, platform));
+
+            // Log rejection to audit file
+            plugin.getAuditLogger().log("KICK", String.format("Denied %s (%s) - Not whitelisted (Platform: %s).", name, uuid, platform));
 
             // Trigger Discord Webhook
             plugin.fireWebhook("reject", name, uuid.toString(), xuid, platform, null);

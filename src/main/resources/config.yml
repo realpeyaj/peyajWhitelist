@@ -3,6 +3,10 @@
 # Whether the whitelist is enabled on startup
 enabled: true
 
+# Whether maintenance mode is enabled on startup.
+# If true, only players with OP status or permission 'peyajwhitelist.maintenance' can connect.
+maintenance: false
+
 # The message displayed to players who are not whitelisted.
 # Supports legacy color codes (&) and hex color codes (&#FFFFFF)
 kick-message: "&#ff4444&lPeyajWhitelist &7» &cYou are not whitelisted on this server!\n\n&7If you think this is a mistake, please contact the server administrator.\n&7Bedrock Players: Please provide your gamertag."
@@ -10,6 +14,10 @@ kick-message: "&#ff4444&lPeyajWhitelist &7» &cYou are not whitelisted on this s
 # Bedrock-specific kick message. Displays only to Bedrock players.
 # If empty or not set, falls back to the default 'kick-message' above.
 kick-message-bedrock: "&#ff4444&lPeyajWhitelist &7» &cYou are not whitelisted on this server!\n\n&7Please request access using your Bedrock Gamertag.\n&7If you have a Java account, you can link it using Floodgate."
+
+# The message displayed to players kicked during maintenance mode.
+kick-message-maintenance: "&#ff4444&lPeyajWhitelist &7» &cThe server is currently under maintenance!\n\n&7Please check back later. Staff members may bypass this using their bypass permissions."
+
 
 
 # If true, the plugin will allow Bedrock players to join if they are whitelisted
@@ -33,4 +41,12 @@ discord-webhook:
   notify-on-reject: true
   # Notify when a player is successfully whitelisted by an admin
   notify-on-whitelist: true
+  # Custom styling for Discord Webhook embeds
+  styling:
+    reject:
+      title: "❌ Whitelist Rejection"
+      color: "#ff3332"
+    whitelist:
+      title: "✅ Player Whitelisted"
+      color: "#3bc033"
 

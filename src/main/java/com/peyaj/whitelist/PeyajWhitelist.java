@@ -10,6 +10,8 @@ import com.peyaj.whitelist.hook.ILuckPermsHook;
 import com.peyaj.whitelist.listener.PlayerLoginListener;
 import com.peyaj.whitelist.manager.WhitelistManager;
 import com.peyaj.whitelist.model.PendingRequest;
+import com.peyaj.whitelist.placeholder.PeyajWhitelistExpansion;
+import com.peyaj.whitelist.util.AuditLogger;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -22,15 +24,18 @@ public class PeyajWhitelist extends JavaPlugin {
     private WhitelistManager whitelistManager;
     private IFloodgateHook floodgateHook;
     private ILuckPermsHook luckPermsHook;
+    private AuditLogger auditLogger;
     private volatile boolean whitelistEnabled;
+    private volatile boolean maintenanceMode;
 
     @Override
     public void onEnable() {
-        // Save default config.yml if it doesn't exist
-        saveDefaultConfig();
+        // Initialize Audit Logger
+        this.auditLogger = new AuditLogger(this);
 
         // Load whitelist enabled state
         this.whitelistEnabled = getConfig().getBoolean("enabled", true);
+        this.maintenanceMode = getConfig().getBoolean("maintenance", false);
 
         // Detect and hook into Floodgate (soft-dependency)
         if (getServer().getPluginManager().isPluginEnabled("Floodgate")) {
@@ -56,6 +61,12 @@ public class PeyajWhitelist extends JavaPlugin {
         // Register listener
         getServer().getPluginManager().registerEvents(new PlayerLoginListener(this), this);
 
+        // Register PlaceholdersAPI expansion
+        if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+            new PeyajWhitelistExpansion(this).register();
+            getLogger().info("Successfully registered PlaceholdersAPI expansion.");
+        }
+
         // Register command
         WhitelistCommand cmd = new WhitelistCommand(this);
         if (getCommand("pwhitelist") != null) {
@@ -63,12 +74,17 @@ public class PeyajWhitelist extends JavaPlugin {
             getCommand("pwhitelist").setTabCompleter(cmd);
         }
 
-        // Print minimalist startup banner
+        // Log and print minimalist startup banner
+        auditLogger.log("SYSTEM", "PeyajWhitelist has been enabled.");
         printBanner();
     }
 
     @Override
     public void onDisable() {
+        if (auditLogger != null) {
+            auditLogger.log("SYSTEM", "PeyajWhitelist has been disabled.");
+            auditLogger.shutdown();
+        }
         getLogger().info("PeyajWhitelist has been disabled.");
     }
 
@@ -80,6 +96,7 @@ public class PeyajWhitelist extends JavaPlugin {
         boolean luckpermsActive = getServer().getPluginManager().isPluginEnabled("LuckPerms");
         getLogger().info("▲ PeyajWhitelist v1.0.0");
         getLogger().info("▪ Whitelist: " + (whitelistEnabled ? "§aEnabled" : "§cDisabled"));
+        getLogger().info("▪ Maintenance: " + (maintenanceMode ? "§cEnabled" : "§aDisabled"));
         getLogger().info("▪ Crossplay: " + (floodgateActive ? "§aActive (Geyser/Floodgate)" : "§7Inactive"));
         getLogger().info("▪ LuckPerms: " + (luckpermsActive ? "§aHooked (Bypasses active)" : "§7Inactive"));
     }
@@ -90,8 +107,12 @@ public class PeyajWhitelist extends JavaPlugin {
     public void reloadPluginConfig() {
         reloadConfig();
         this.whitelistEnabled = getConfig().getBoolean("enabled", true);
+        this.maintenanceMode = getConfig().getBoolean("maintenance", false);
         if (whitelistManager != null) {
             whitelistManager.loadWhitelist();
+        }
+        if (auditLogger != null) {
+            auditLogger.log("SYSTEM", "Plugin configuration reloaded.");
         }
     }
 
@@ -103,6 +124,22 @@ public class PeyajWhitelist extends JavaPlugin {
         this.whitelistEnabled = enabled;
         getConfig().set("enabled", enabled);
         saveConfig();
+        if (auditLogger != null) {
+            auditLogger.log("SYSTEM", "Whitelist toggled to " + (enabled ? "ENABLED" : "DISABLED"));
+        }
+    }
+
+    public boolean isMaintenanceMode() {
+        return maintenanceMode;
+    }
+
+    public void setMaintenanceMode(boolean active) {
+        this.maintenanceMode = active;
+        getConfig().set("maintenance", active);
+        saveConfig();
+        if (auditLogger != null) {
+            auditLogger.log("MAINTENANCE", "Maintenance mode set to " + (active ? "ENABLED" : "DISABLED"));
+        }
     }
 
     public WhitelistManager getWhitelistManager() {
@@ -115,6 +152,10 @@ public class PeyajWhitelist extends JavaPlugin {
 
     public ILuckPermsHook getLuckPermsHook() {
         return luckPermsHook;
+    }
+
+    public AuditLogger getAuditLogger() {
+        return auditLogger;
     }
 
     public boolean isVerbose() {
@@ -176,8 +217,22 @@ public class PeyajWhitelist extends JavaPlugin {
         com.google.gson.JsonArray embeds = new com.google.gson.JsonArray();
         com.google.gson.JsonObject embed = new com.google.gson.JsonObject();
 
-        embed.addProperty("title", isReject ? "❌ Whitelist Rejection" : "✅ Player Whitelisted");
-        embed.addProperty("color", isReject ? 16724530 : 3916595); // Red (#ff3332) or Green (#3bc033)
+        String stylePath = isReject ? "discord-webhook.styling.reject" : "discord-webhook.styling.whitelist";
+        String defaultTitle = isReject ? "❌ Whitelist Rejection" : "✅ Player Whitelisted";
+        String defaultColor = isReject ? "#ff3332" : "#3bc033";
+
+        String title = getConfig().getString(stylePath + ".title", defaultTitle);
+        String colorHex = getConfig().getString(stylePath + ".color", defaultColor);
+
+        int colorInt;
+        try {
+            colorInt = Integer.parseInt(colorHex.replace("#", ""), 16);
+        } catch (NumberFormatException e) {
+            colorInt = isReject ? 16724530 : 3916595;
+        }
+
+        embed.addProperty("title", title);
+        embed.addProperty("color", colorInt);
 
         StringBuilder desc = new StringBuilder();
         if (isReject) {
