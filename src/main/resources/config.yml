@@ -29,6 +29,9 @@ auto-detect-bedrock-prefix: true
 # player has the bypass permission ('peyajwhitelist.bypass'). If they do, they can join.
 luckperms-bypass: true
 
+# If true, server Operators (OPs) will automatically bypass the whitelist.
+op-bypass: true
+
 
 # Enable debug logging in the console
 debug: false

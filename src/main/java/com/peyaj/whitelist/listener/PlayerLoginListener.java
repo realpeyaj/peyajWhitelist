@@ -28,9 +28,10 @@ public class PlayerLoginListener implements Listener {
             plugin.getLogger().info(String.format("Processing connection request: %s (%s)", name, uuid));
         }
 
+        boolean isOp = org.bukkit.Bukkit.getOfflinePlayer(uuid).isOp();
+
         // 1. Maintenance Mode Gate Check
         if (plugin.isMaintenanceMode()) {
-            boolean isOp = org.bukkit.Bukkit.getOfflinePlayer(uuid).isOp();
             boolean hasBypass = plugin.getLuckPermsHook().hasBypassPermission(uuid) || isOp;
             if (!hasBypass) {
                 String kickMsg = plugin.getConfig().getString("kick-message-maintenance", 
@@ -49,7 +50,15 @@ public class PlayerLoginListener implements Listener {
             return;
         }
 
-        // 3. Check if player is whitelisted
+        // 3. Check if player has Operator status bypass
+        if (plugin.getConfig().getBoolean("op-bypass", true) && isOp) {
+            if (plugin.isVerbose()) {
+                plugin.getLogger().info("[PeyajWhitelist Debug] Allowed connection bypass for operator: " + name);
+            }
+            return;
+        }
+
+        // 4. Check if player is whitelisted
         if (!plugin.getWhitelistManager().isWhitelisted(uuid, name)) {
             // Gather details for pending request queue and webhook
             boolean isBedrock = plugin.getFloodgateHook().isBedrockPlayer(uuid);
