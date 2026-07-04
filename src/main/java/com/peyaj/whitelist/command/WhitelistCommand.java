@@ -2,6 +2,7 @@ package com.peyaj.whitelist.command;
 
 import com.peyaj.whitelist.PeyajWhitelist;
 import com.peyaj.whitelist.manager.WhitelistManager;
+import com.peyaj.whitelist.hook.IFloodgateHook;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -84,20 +85,60 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                         sender.sendMessage(PREFIX + result);
                         
                         // Instant Kick Logic:
-                        Player targetPlayer = null;
-                        try {
-                            UUID uuid = UUID.fromString(removeTarget);
-                            targetPlayer = Bukkit.getPlayer(uuid);
-                        } catch (IllegalArgumentException e) {
-                            targetPlayer = Bukkit.getPlayer(removeTarget);
+                        final String finalRemoveTarget = removeTarget.trim().toLowerCase();
+                        List<Player> playersToKick = new ArrayList<>();
+                        IFloodgateHook floodgate = plugin.getFloodgateHook();
+
+                        for (Player player : Bukkit.getOnlinePlayers()) {
+                            // Match by UUID
+                            if (player.getUniqueId().toString().equalsIgnoreCase(finalRemoveTarget)) {
+                                playersToKick.add(player);
+                                continue;
+                            }
+                            // Match by Name
+                            if (player.getName().equalsIgnoreCase(finalRemoveTarget)) {
+                                playersToKick.add(player);
+                                continue;
+                            }
+                            // Floodgate integration checks if Bedrock player
+                            if (floodgate.isBedrockPlayer(player.getUniqueId())) {
+                                String xuid = floodgate.getXuid(player.getUniqueId());
+                                if (xuid != null && xuid.equalsIgnoreCase(finalRemoveTarget)) {
+                                    playersToKick.add(player);
+                                    continue;
+                                }
+                                String rawUsername = floodgate.getRawUsername(player.getUniqueId());
+                                if (rawUsername != null && rawUsername.equalsIgnoreCase(finalRemoveTarget)) {
+                                    playersToKick.add(player);
+                                    continue;
+                                }
+                                String javaUsername = floodgate.getJavaUsername(player.getUniqueId());
+                                if (javaUsername != null && javaUsername.equalsIgnoreCase(finalRemoveTarget)) {
+                                    playersToKick.add(player);
+                                    continue;
+                                }
+                            }
+                            // Auto-detect Bedrock prefix check
+                            if (plugin.getConfig().getBoolean("auto-detect-bedrock-prefix", true)) {
+                                String name = player.getName();
+                                if (name.length() > 1 && (name.startsWith(".") || name.startsWith("*"))) {
+                                    String stripped = name.substring(1);
+                                    if (stripped.equalsIgnoreCase(finalRemoveTarget)) {
+                                        playersToKick.add(player);
+                                        continue;
+                                    }
+                                }
+                            }
                         }
 
-                        if (targetPlayer != null && targetPlayer.isOnline()) {
+                        if (!playersToKick.isEmpty()) {
                             String rawMessage = plugin.getConfig().getString("kick-message-removal", 
                                     "&cYou have been removed from the whitelist.");
                             String coloredMessage = translateColors(rawMessage);
-                            targetPlayer.kickPlayer(coloredMessage);
-                            plugin.getAuditLogger().log("KICK", String.format("Instantly kicked %s - Removed from whitelist by %s", targetPlayer.getName(), sender.getName()));
+                            for (Player p : playersToKick) {
+                                p.kickPlayer(coloredMessage);
+                                plugin.getAuditLogger().log("KICK", String.format("Instantly kicked %s - Removed from whitelist by %s", p.getName(), sender.getName()));
+                            }
                         }
                     });
                 });
