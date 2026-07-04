@@ -101,9 +101,54 @@ public class WhitelistManager {
             whitelistConfig.set("xuids", xuidsList);
 
             whitelistConfig.save(whitelistFile);
+            createBackup();
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not save whitelist.yml", e);
         }
+    }
+
+    /**
+     * Creates a timestamped backup of the whitelist database, keeping only the 10 most recent backups.
+     */
+    public synchronized void createBackup() {
+        File backupsDir = new File(plugin.getDataFolder(), "backups");
+        if (!backupsDir.exists()) {
+            backupsDir.mkdirs();
+        }
+
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+        String filename = "whitelist_backup_" + sdf.format(new java.util.Date()) + ".yml";
+        File backupFile = new File(backupsDir, filename);
+
+        try {
+            whitelistConfig.save(backupFile);
+            if (plugin.getAuditLogger() != null) {
+                plugin.getAuditLogger().log("SYSTEM", "Created whitelist database backup: " + filename);
+            }
+
+            // Keep only the latest 10 backups
+            File[] files = backupsDir.listFiles((dir, name) -> name.startsWith("whitelist_backup_") && name.endsWith(".yml"));
+            if (files != null && files.length > 10) {
+                java.util.Arrays.sort(files, java.util.Comparator.comparingLong(File::lastModified));
+                for (int i = 0; i < files.length - 10; i++) {
+                    files[i].delete();
+                }
+            }
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to create whitelist database backup", e);
+        }
+    }
+
+    /**
+     * Checks if the whitelist has reached its maximum configured limit.
+     */
+    private boolean isWhitelistFull() {
+        int maxCap = plugin.getConfig().getInt("max-whitelist-entries", -1);
+        if (maxCap <= 0) {
+            return false;
+        }
+        int currentSize = whitelistedNames.size() + whitelistedUuids.size() + whitelistedXuids.size();
+        return currentSize >= maxCap;
     }
 
     /**
@@ -237,26 +282,45 @@ public class WhitelistManager {
         // Check if UUID
         try {
             UUID uuid = UUID.fromString(input);
+            if (whitelistedUuids.contains(uuid)) {
+                return "§eUUID " + uuid + " is already whitelisted.";
+            }
+            if (isWhitelistFull()) {
+                int maxCap = plugin.getConfig().getInt("max-whitelist-entries", -1);
+                return "§cCannot add player. The whitelist database size limit (" + maxCap + ") has been reached!";
+            }
             if (whitelistedUuids.add(uuid)) {
                 saveWhitelist();
                 return "§aSuccessfully whitelisted UUID: §e" + uuid;
             }
-            return "§eUUID " + uuid + " is already whitelisted.";
         } catch (IllegalArgumentException e) {
             // Not a UUID, continue
         }
 
         // Check if XUID (Numeric, length between 10 and 20)
         if (input.matches("\\d{10,20}")) {
+            if (whitelistedXuids.contains(input)) {
+                return "§eXUID " + input + " is already whitelisted.";
+            }
+            if (isWhitelistFull()) {
+                int maxCap = plugin.getConfig().getInt("max-whitelist-entries", -1);
+                return "§cCannot add player. The whitelist database size limit (" + maxCap + ") has been reached!";
+            }
             if (whitelistedXuids.add(input)) {
                 saveWhitelist();
                 return "§aSuccessfully whitelisted Bedrock XUID: §e" + input;
             }
-            return "§eXUID " + input + " is already whitelisted.";
         }
 
         // Treat as Username
         String lowercaseName = input.toLowerCase();
+        if (whitelistedNames.contains(lowercaseName)) {
+            return "§eUsername " + input + " is already whitelisted.";
+        }
+        if (isWhitelistFull()) {
+            int maxCap = plugin.getConfig().getInt("max-whitelist-entries", -1);
+            return "§cCannot add player. The whitelist database size limit (" + maxCap + ") has been reached!";
+        }
         if (whitelistedNames.add(lowercaseName)) {
             saveWhitelist();
             return "§aSuccessfully whitelisted username: §e" + input;

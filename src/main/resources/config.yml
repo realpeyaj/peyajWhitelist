@@ -54,3 +54,19 @@ discord-webhook:
       title: "✅ Player Whitelisted"
       color: "#3bc033"
 
+# The maximum allowed players in the whitelist database.
+# Set to -1 for unlimited. If reached, admins cannot add more players.
+max-whitelist-entries: -1
+
+# The message displayed to players when they are instantly kicked upon removal from the whitelist.
+kick-message-removal: "&#ff4444&lPeyajWhitelist &7» &cYou have been removed from the whitelist!\n&7Please contact staff if you believe this is a mistake."
+
+# In-game notification sounds and title alerts displayed on-screen to administrators
+# when they successfully whitelist or approve a player.
+admin-notifications:
+  enabled: true
+  sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+  title: "&aPlayer Approved"
+  subtitle: "&7%player% has been whitelisted"
+
+

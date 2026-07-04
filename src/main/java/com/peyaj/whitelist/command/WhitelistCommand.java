@@ -61,7 +61,12 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                     String result = manager.addPlayer(addTarget);
                     plugin.getAuditLogger().log("ADDED", String.format("%s by %s", addTarget, sender.getName()));
-                    plugin.getServer().getScheduler().runTask(plugin, () -> sender.sendMessage(PREFIX + result));
+                    plugin.getServer().getScheduler().runTask(plugin, () -> {
+                        sender.sendMessage(PREFIX + result);
+                        if (result.contains("Successfully")) {
+                            sendAdminNotification(sender, addTarget);
+                        }
+                    });
                 });
                 break;
 
@@ -75,7 +80,26 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                     String result = manager.removePlayer(removeTarget);
                     plugin.getAuditLogger().log("REMOVED", String.format("%s by %s", removeTarget, sender.getName()));
-                    plugin.getServer().getScheduler().runTask(plugin, () -> sender.sendMessage(PREFIX + result));
+                    plugin.getServer().getScheduler().runTask(plugin, () -> {
+                        sender.sendMessage(PREFIX + result);
+                        
+                        // Instant Kick Logic:
+                        Player targetPlayer = null;
+                        try {
+                            UUID uuid = UUID.fromString(removeTarget);
+                            targetPlayer = Bukkit.getPlayer(uuid);
+                        } catch (IllegalArgumentException e) {
+                            targetPlayer = Bukkit.getPlayer(removeTarget);
+                        }
+
+                        if (targetPlayer != null && targetPlayer.isOnline()) {
+                            String rawMessage = plugin.getConfig().getString("kick-message-removal", 
+                                    "&cYou have been removed from the whitelist.");
+                            String coloredMessage = translateColors(rawMessage);
+                            targetPlayer.kickPlayer(coloredMessage);
+                            plugin.getAuditLogger().log("KICK", String.format("Instantly kicked %s - Removed from whitelist by %s", targetPlayer.getName(), sender.getName()));
+                        }
+                    });
                 });
                 break;
 
@@ -153,6 +177,9 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                         plugin.getAuditLogger().log("ADDED", String.format("%s by %s (Approved from empty queue)", targetArg, sender.getName()));
                         plugin.getServer().getScheduler().runTask(plugin, () -> {
                             sender.sendMessage(PREFIX + result);
+                            if (result.contains("Successfully")) {
+                                sendAdminNotification(sender, targetArg);
+                            }
                             // Simple webhook notify
                             plugin.fireWebhook("whitelist", targetArg, null, null, "Unknown", sender.getName());
                         });
@@ -174,6 +201,7 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
 
                         plugin.getServer().getScheduler().runTask(plugin, () -> {
                             sender.sendMessage(PREFIX + "§aSuccessfully whitelisted §e" + finalReq.getName() + " §7(" + finalReq.getPlatform() + ") §aand linked their UUID/XUID.");
+                            sendAdminNotification(sender, finalReq.getName());
                             // Rich webhook notification
                             plugin.fireWebhook("whitelist", finalReq.getName(), finalReq.getUuid().toString(), finalReq.getXuid(), finalReq.getPlatform(), sender.getName());
                         });
@@ -338,5 +366,43 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
         }
 
         return Collections.emptyList();
+    }
+
+    private String translateColors(String message) {
+        if (message == null) return "";
+        java.util.regex.Pattern hexPattern = java.util.regex.Pattern.compile("&#([A-Fa-f0-9]{6})");
+        java.util.regex.Matcher matcher = hexPattern.matcher(message);
+        StringBuffer sb = new StringBuffer();
+        while (matcher.find()) {
+            String hexCode = matcher.group(1);
+            StringBuilder replacement = new StringBuilder("§x");
+            for (char c : hexCode.toCharArray()) {
+                replacement.append('§').append(c);
+            }
+            matcher.appendReplacement(sb, replacement.toString());
+        }
+        matcher.appendTail(sb);
+        return org.bukkit.ChatColor.translateAlternateColorCodes('&', sb.toString());
+    }
+
+    private void sendAdminNotification(CommandSender sender, String targetPlayerName) {
+        if (!(sender instanceof Player)) return;
+        Player admin = (Player) sender;
+        if (!plugin.getConfig().getBoolean("admin-notifications.enabled", true)) return;
+
+        String soundName = plugin.getConfig().getString("admin-notifications.sound", "ENTITY_EXPERIENCE_ORB_PICKUP");
+        try {
+            admin.playSound(admin.getLocation(), org.bukkit.Sound.valueOf(soundName), 1.0f, 1.0f);
+        } catch (Exception ignored) {}
+
+        String title = plugin.getConfig().getString("admin-notifications.title", "&aPlayer Approved");
+        String subtitle = plugin.getConfig().getString("admin-notifications.subtitle", "&7%player% has been whitelisted")
+                .replace("%player%", targetPlayerName);
+
+        admin.sendTitle(
+                translateColors(title),
+                translateColors(subtitle),
+                10, 40, 10
+        );
     }
 }
