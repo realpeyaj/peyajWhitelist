@@ -30,6 +30,17 @@ public class PlayerLoginListener implements Listener {
 
         // Check if player is whitelisted
         if (!plugin.getWhitelistManager().isWhitelisted(uuid, name)) {
+            // Gather details for pending request queue and webhook
+            boolean isBedrock = plugin.getFloodgateHook().isBedrockPlayer(uuid);
+            String platform = isBedrock ? "Bedrock" : "Java";
+            String xuid = isBedrock ? plugin.getFloodgateHook().getXuid(uuid) : null;
+
+            // Register rejected request
+            plugin.addPendingRequest(new com.peyaj.whitelist.model.PendingRequest(name, uuid, xuid, platform));
+
+            // Trigger Discord Webhook
+            plugin.fireWebhook("reject", name, uuid.toString(), xuid, platform, null);
+
             // Player is not whitelisted, deny entry
             String kickMessage = plugin.getConfig().getString("kick-message", 
                     "&cYou are not whitelisted on this server!");

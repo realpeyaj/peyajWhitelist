@@ -14,3 +14,13 @@ auto-detect-bedrock-prefix: true
 
 # Enable debug logging in the console
 debug: false
+
+# Discord Webhook integration. Sends beautiful embeds when players attempt to connect.
+discord-webhook:
+  enabled: false
+  url: "YOUR_DISCORD_WEBHOOK_URL_HERE"
+  # Notify when a connection is rejected by the whitelist
+  notify-on-reject: true
+  # Notify when a player is successfully whitelisted by an admin
+  notify-on-whitelist: true
+

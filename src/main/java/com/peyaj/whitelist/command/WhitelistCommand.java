@@ -109,6 +109,69 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(PREFIX + "§aSuccessfully cleared all entries from the whitelist.");
                 break;
 
+            case "pending":
+                List<com.peyaj.whitelist.model.PendingRequest> pending = plugin.getPendingRequests();
+                sender.sendMessage(PREFIX + "§7--- §dRecent Rejected Attempts §7---");
+                if (pending.isEmpty()) {
+                    sender.sendMessage("  §fNo recent connection requests.");
+                } else {
+                    for (int i = 0; i < pending.size(); i++) {
+                        com.peyaj.whitelist.model.PendingRequest r = pending.get(i);
+                        long diff = (System.currentTimeMillis() - r.getTimestamp()) / 1000;
+                        String timeStr = diff < 60 ? diff + "s ago" : (diff / 60) + "m ago";
+                        sender.sendMessage(String.format("  §e%d. §f%s §7(%s) - §e%s", i + 1, r.getName(), r.getPlatform(), timeStr));
+                    }
+                    sender.sendMessage(PREFIX + "§7To approve: §e/pwhitelist approve <index|name>");
+                }
+                break;
+
+            case "approve":
+                if (args.length < 2) {
+                    sender.sendMessage(PREFIX + "§cUsage: /" + label + " approve <index|name>");
+                    return true;
+                }
+                String targetArg = args[1];
+                com.peyaj.whitelist.model.PendingRequest req = null;
+                try {
+                    int index = Integer.parseInt(targetArg) - 1;
+                    req = plugin.popPendingRequest(index);
+                } catch (NumberFormatException e) {
+                    req = plugin.popPendingRequest(targetArg);
+                }
+
+                if (req == null) {
+                    // Fallback to normal add if not found in pending
+                    sender.sendMessage(PREFIX + "§cNo matching pending request found. Adding §6" + targetArg + " §eas a new whitelist entry...");
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                        String result = manager.addPlayer(targetArg);
+                        plugin.getServer().getScheduler().runTask(plugin, () -> {
+                            sender.sendMessage(PREFIX + result);
+                            // Simple webhook notify
+                            plugin.fireWebhook("whitelist", targetArg, null, null, "Unknown", sender.getName());
+                        });
+                    });
+                } else {
+                    final com.peyaj.whitelist.model.PendingRequest finalReq = req;
+                    sender.sendMessage(PREFIX + "§eApproving and whitelisting §6" + finalReq.getName() + "§e...");
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                        // Whitelist by Name
+                        manager.addPlayer(finalReq.getName());
+                        // Whitelist by UUID
+                        manager.addPlayer(finalReq.getUuid().toString());
+                        // Whitelist by XUID if present
+                        if (finalReq.getXuid() != null) {
+                            manager.addPlayer(finalReq.getXuid());
+                        }
+
+                        plugin.getServer().getScheduler().runTask(plugin, () -> {
+                            sender.sendMessage(PREFIX + "§aSuccessfully whitelisted §e" + finalReq.getName() + " §7(" + finalReq.getPlatform() + ") §aand linked their UUID/XUID.");
+                            // Rich webhook notification
+                            plugin.fireWebhook("whitelist", finalReq.getName(), finalReq.getUuid().toString(), finalReq.getXuid(), finalReq.getPlatform(), sender.getName());
+                        });
+                    });
+                }
+                break;
+
             default:
                 sendHelp(sender, label);
                 break;
@@ -125,6 +188,8 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§e/" + label + " remove <name|uuid|xuid> §7- Remove player from whitelist");
         sender.sendMessage("§e/" + label + " list §7- List all whitelisted entries");
         sender.sendMessage("§e/" + label + " reload §7- Reload config files");
+        sender.sendMessage("§e/" + label + " pending §7- View recent connection rejection attempts");
+        sender.sendMessage("§e/" + label + " approve <index|name> §7- Whitelist and link a pending player");
         sender.sendMessage("§e/" + label + " clear §7- Clear the entire whitelist");
     }
 
@@ -136,7 +201,7 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
 
         List<String> completions = new ArrayList<>();
         if (args.length == 1) {
-            List<String> subCommands = Arrays.asList("on", "off", "add", "remove", "list", "reload", "clear");
+            List<String> subCommands = Arrays.asList("on", "off", "add", "remove", "list", "reload", "clear", "pending", "approve");
             StringUtil.copyPartialMatches(args[0], subCommands, completions);
             Collections.sort(completions);
             return completions;
@@ -157,6 +222,15 @@ public class WhitelistCommand implements CommandExecutor, TabCompleter {
                     }
                 }
                 StringUtil.copyPartialMatches(args[1], onlineNames, completions);
+                Collections.sort(completions);
+                return completions;
+            } else if (subCommand.equals("approve")) {
+                List<String> pendingNames = new ArrayList<>();
+                List<com.peyaj.whitelist.model.PendingRequest> requests = plugin.getPendingRequests();
+                for (com.peyaj.whitelist.model.PendingRequest r : requests) {
+                    pendingNames.add(r.getName());
+                }
+                StringUtil.copyPartialMatches(args[1], pendingNames, completions);
                 Collections.sort(completions);
                 return completions;
             } else if (subCommand.equals("clear")) {
