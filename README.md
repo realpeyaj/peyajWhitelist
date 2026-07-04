@@ -6,12 +6,16 @@ A robust, crossplay-compatible whitelist plugin for Minecraft 1.21.x to 26.2. Su
 
 - **Crossplay Support:** Automatic matching for Bedrock names, XUIDs, and Floodgate UUIDs.
 - **Rejection Queue:** View rejected connections using `/pwl pending` and approve via `/pwl approve <index>`.
-- **Discord Integration:** Asynchronous Webhooks with player head thumbnails and customizable embed styling.
+- **Discord Integration:** Asynchronous Webhooks with player skin head thumbnails, custom webhooks bot name, custom avatar URLs, and embed styling.
 - **Bypass Integration:** Support for LuckPerms bypass via `peyajwhitelist.bypass` permission.
 - **Audit Logging:** Detailed database modification log (`audit.log`) queryable directly in-game.
 - **Maintenance Mode:** Lock connection gates for maintenance while allowing staff bypasses.
 - **PlaceholdersAPI:** Native placeholders for scoreboard and tablist integration.
 - **Vanilla Importer:** Fast one-command bulk transfer from standard Minecraft `whitelist.json`.
+- **Auto-Backups:** Dynamic timestamped backups with automated folder cleanup (limits to 10 latest files).
+- **Instant Kick:** Automatically kicks online players immediately when they are removed from the whitelist.
+- **Whitelist Cap:** Enforce a strict database size limit (`max-whitelist-entries`) to prevent bloating.
+- **Admin SFX & Titles:** Displays on-screen titles and plays sound cues for in-game staff upon approving players.
 - **Self-Healing Configs:** Automatically backs up corrupted database files to prevent server crashes.
 
 ## Commands
