@@ -67,11 +67,18 @@ public class PeyajWhitelist extends JavaPlugin {
             getLogger().info("Successfully registered PlaceholdersAPI expansion.");
         }
 
-        // Register command
+        // Disable vanilla whitelist to prevent dual checks and conflicts
+        getServer().setWhitelist(false);
+
+        // Register commands
         WhitelistCommand cmd = new WhitelistCommand(this);
         if (getCommand("pwhitelist") != null) {
             getCommand("pwhitelist").setExecutor(cmd);
             getCommand("pwhitelist").setTabCompleter(cmd);
+        }
+        if (getCommand("whitelist") != null) {
+            getCommand("whitelist").setExecutor(cmd);
+            getCommand("whitelist").setTabCompleter(cmd);
         }
 
         // Log and print minimalist startup banner

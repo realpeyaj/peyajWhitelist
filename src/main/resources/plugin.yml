@@ -10,3 +10,8 @@ commands:
     aliases: [pwl]
     permission: peyajwhitelist.admin
     usage: /pwhitelist <on|off|add|remove|list|reload>
+  whitelist:
+    description: Manage the PeyajWhitelist (overridden).
+    aliases: [wl]
+    permission: peyajwhitelist.admin
+    usage: /whitelist <on|off|add|remove|list|reload>
