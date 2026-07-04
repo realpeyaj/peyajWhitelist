@@ -1,0 +1,7 @@
+# PeyajWhitelist player database
+# Add player names, UUIDs, or Bedrock XUIDs here.
+# Note: You can manage this file using the '/pwhitelist' command ingame or via console.
+
+names: []
+uuids: []
+xuids: []

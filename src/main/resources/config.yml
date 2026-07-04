@@ -1,0 +1,16 @@
+# PeyajWhitelist Configuration
+
+# Whether the whitelist is enabled on startup
+enabled: true
+
+# The message displayed to players who are not whitelisted.
+# Supports legacy color codes (&) and hex color codes (&#FFFFFF)
+kick-message: "&#ff4444&lPeyajWhitelist &7» &cYou are not whitelisted on this server!\n\n&7If you think this is a mistake, please contact the server administrator.\n&7Bedrock Players: Please provide your gamertag."
+
+# If true, the plugin will allow Bedrock players to join if they are whitelisted
+# either with or without their Floodgate prefix (e.g. if prefix is '.', whitelisting
+# 'John Doe' will allow '.John Doe' to join).
+auto-detect-bedrock-prefix: true
+
+# Enable debug logging in the console
+debug: false
