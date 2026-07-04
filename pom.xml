@@ -48,6 +48,13 @@
             <version>2.2.5-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
+        <!-- LuckPerms API -->
+        <dependency>
+            <groupId>net.luckperms</groupId>
+            <artifactId>api</artifactId>
+            <version>5.5</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>

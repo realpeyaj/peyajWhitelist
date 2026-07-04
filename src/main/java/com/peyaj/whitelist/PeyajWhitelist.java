@@ -2,8 +2,11 @@ package com.peyaj.whitelist;
 
 import com.peyaj.whitelist.command.WhitelistCommand;
 import com.peyaj.whitelist.hook.ActiveFloodgateHook;
+import com.peyaj.whitelist.hook.ActiveLuckPermsHook;
 import com.peyaj.whitelist.hook.DummyFloodgateHook;
+import com.peyaj.whitelist.hook.DummyLuckPermsHook;
 import com.peyaj.whitelist.hook.IFloodgateHook;
+import com.peyaj.whitelist.hook.ILuckPermsHook;
 import com.peyaj.whitelist.listener.PlayerLoginListener;
 import com.peyaj.whitelist.manager.WhitelistManager;
 import com.peyaj.whitelist.model.PendingRequest;
@@ -18,6 +21,7 @@ public class PeyajWhitelist extends JavaPlugin {
 
     private WhitelistManager whitelistManager;
     private IFloodgateHook floodgateHook;
+    private ILuckPermsHook luckPermsHook;
     private volatile boolean whitelistEnabled;
 
     @Override
@@ -35,6 +39,15 @@ public class PeyajWhitelist extends JavaPlugin {
         } else {
             this.floodgateHook = new DummyFloodgateHook();
             getLogger().info("Floodgate was not detected. Running in standard Java-only mode.");
+        }
+
+        // Detect and hook into LuckPerms (soft-dependency)
+        if (getServer().getPluginManager().isPluginEnabled("LuckPerms")) {
+            this.luckPermsHook = new ActiveLuckPermsHook();
+            getLogger().info("Successfully hooked into LuckPerms API. Group/Permission bypass is ACTIVE.");
+        } else {
+            this.luckPermsHook = new DummyLuckPermsHook();
+            getLogger().info("LuckPerms was not detected. Group bypass is INACTIVE.");
         }
 
         // Initialize Whitelist Manager
@@ -64,9 +77,11 @@ public class PeyajWhitelist extends JavaPlugin {
      */
     private void printBanner() {
         boolean floodgateActive = getServer().getPluginManager().isPluginEnabled("Floodgate");
+        boolean luckpermsActive = getServer().getPluginManager().isPluginEnabled("LuckPerms");
         getLogger().info("▲ PeyajWhitelist v1.0.0");
         getLogger().info("▪ Whitelist: " + (whitelistEnabled ? "§aEnabled" : "§cDisabled"));
-        getLogger().info("▪ Crossplay: " + (floodgateActive ? "§aActive (Geyser/Floodgate)" : "§7Inactive (Java-only)"));
+        getLogger().info("▪ Crossplay: " + (floodgateActive ? "§aActive (Geyser/Floodgate)" : "§7Inactive"));
+        getLogger().info("▪ LuckPerms: " + (luckpermsActive ? "§aHooked (Bypasses active)" : "§7Inactive"));
     }
 
     /**
@@ -96,6 +111,10 @@ public class PeyajWhitelist extends JavaPlugin {
 
     public IFloodgateHook getFloodgateHook() {
         return floodgateHook;
+    }
+
+    public ILuckPermsHook getLuckPermsHook() {
+        return luckPermsHook;
     }
 
     public boolean isVerbose() {

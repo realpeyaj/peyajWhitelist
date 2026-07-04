@@ -28,6 +28,14 @@ public class PlayerLoginListener implements Listener {
             plugin.getLogger().info(String.format("Processing connection request: %s (%s)", name, uuid));
         }
 
+        // Check if player has LuckPerms bypass permission
+        if (plugin.getConfig().getBoolean("luckperms-bypass", true) && plugin.getLuckPermsHook().hasBypassPermission(uuid)) {
+            if (plugin.isVerbose()) {
+                plugin.getLogger().info("[PeyajWhitelist Debug] Allowed connection bypass for: " + name + " (has bypass permission)");
+            }
+            return;
+        }
+
         // Check if player is whitelisted
         if (!plugin.getWhitelistManager().isWhitelisted(uuid, name)) {
             // Gather details for pending request queue and webhook
@@ -41,9 +49,16 @@ public class PlayerLoginListener implements Listener {
             // Trigger Discord Webhook
             plugin.fireWebhook("reject", name, uuid.toString(), xuid, platform, null);
 
-            // Player is not whitelisted, deny entry
-            String kickMessage = plugin.getConfig().getString("kick-message", 
-                    "&cYou are not whitelisted on this server!");
+            // Determine kick message based on platform
+            String kickKey = isBedrock ? "kick-message-bedrock" : "kick-message";
+            String kickMessage = plugin.getConfig().getString(kickKey);
+
+            if (isBedrock && (kickMessage == null || kickMessage.trim().isEmpty())) {
+                kickMessage = plugin.getConfig().getString("kick-message", "&cYou are not whitelisted on this server!");
+            }
+            if (kickMessage == null) {
+                kickMessage = "&cYou are not whitelisted on this server!";
+            }
             
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, translateColors(kickMessage));
             

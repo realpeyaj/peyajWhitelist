@@ -7,10 +7,20 @@ enabled: true
 # Supports legacy color codes (&) and hex color codes (&#FFFFFF)
 kick-message: "&#ff4444&lPeyajWhitelist &7» &cYou are not whitelisted on this server!\n\n&7If you think this is a mistake, please contact the server administrator.\n&7Bedrock Players: Please provide your gamertag."
 
+# Bedrock-specific kick message. Displays only to Bedrock players.
+# If empty or not set, falls back to the default 'kick-message' above.
+kick-message-bedrock: "&#ff4444&lPeyajWhitelist &7» &cYou are not whitelisted on this server!\n\n&7Please request access using your Bedrock Gamertag.\n&7If you have a Java account, you can link it using Floodgate."
+
+
 # If true, the plugin will allow Bedrock players to join if they are whitelisted
 # either with or without their Floodgate prefix (e.g. if prefix is '.', whitelisting
 # 'John Doe' will allow '.John Doe' to join).
 auto-detect-bedrock-prefix: true
+
+# If true, the plugin will query LuckPerms (if installed) to check if a connecting
+# player has the bypass permission ('peyajwhitelist.bypass'). If they do, they can join.
+luckperms-bypass: true
+
 
 # Enable debug logging in the console
 debug: false
