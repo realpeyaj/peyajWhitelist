@@ -1,5 +1,8 @@
 # PeyajWhitelist
 
+[![bStats Servers](https://img.shields.io/bstats/servers/32816?style=for-the-badge&logo=bstats&color=blue)](https://bstats.org/plugin/bukkit/PeyajWhitelist/32816)
+[![bStats Players](https://img.shields.io/bstats/players/32816?style=for-the-badge&logo=bstats&color=green)](https://bstats.org/plugin/bukkit/PeyajWhitelist/32816)
+
 A robust, crossplay-compatible whitelist plugin supporting Minecraft 1.13.x to 1.21.x (and older/newer versions), compiled for Java 17+. Supports Bedrock Edition players joining via GeyserMC/Floodgate.
 
 ## Features
@@ -17,6 +20,7 @@ A robust, crossplay-compatible whitelist plugin supporting Minecraft 1.13.x to 1
 - **Whitelist Cap:** Enforce a strict database size limit (`max-whitelist-entries`) to prevent bloating.
 - **Admin SFX & Titles:** Displays on-screen titles and plays sound cues for in-game staff upon approving players.
 - **Self-Healing Configs:** Automatically backs up corrupted database files to prevent server crashes.
+- **bStats Metrics:** Integrated anonymous usage statistics and server telemetry.
 
 ## Commands
 
@@ -40,6 +44,10 @@ All commands require the `peyajwhitelist.admin` permission (alias: `/pwl`):
 - `%peyajwhitelist_count%` - Size of player database
 - `%peyajwhitelist_pending_count%` - Current size of connection rejects queue
 - `%peyajwhitelist_maintenance%` - Enabled / Disabled maintenance status
+
+## Metrics
+
+[![bStats](https://bstats.org/signatures/bukkit/PeyajWhitelist.png)](https://bstats.org/plugin/bukkit/PeyajWhitelist/32816)
 
 ## License
 

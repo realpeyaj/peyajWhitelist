@@ -1,5 +1,5 @@
 name: PeyajWhitelist
-version: 4.1
+version: 4.2
 main: com.peyaj.whitelist.PeyajWhitelist
 api-version: 1.13
 description: A robust crossplay-compatible whitelist plugin supporting Java and Bedrock Edition players.

@@ -12,6 +12,7 @@ import com.peyaj.whitelist.manager.WhitelistManager;
 import com.peyaj.whitelist.model.PendingRequest;
 import com.peyaj.whitelist.placeholder.PeyajWhitelistExpansion;
 import com.peyaj.whitelist.util.AuditLogger;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
@@ -81,6 +82,10 @@ public class PeyajWhitelist extends JavaPlugin {
             getCommand("whitelist").setTabCompleter(cmd);
         }
 
+        // Initialize bStats Metrics
+        int pluginId = 32816;
+        new Metrics(this, pluginId);
+
         // Log and print minimalist startup banner
         auditLogger.log("SYSTEM", "PeyajWhitelist has been enabled.");
         printBanner();
@@ -101,7 +106,7 @@ public class PeyajWhitelist extends JavaPlugin {
     private void printBanner() {
         boolean floodgateActive = getServer().getPluginManager().isPluginEnabled("Floodgate");
         boolean luckpermsActive = getServer().getPluginManager().isPluginEnabled("LuckPerms");
-        getLogger().info("▲ PeyajWhitelist v4.1");
+        getLogger().info("▲ PeyajWhitelist v4.2");
         getLogger().info("▪ Whitelist: " + (whitelistEnabled ? "§aEnabled" : "§cDisabled"));
         getLogger().info("▪ Maintenance: " + (maintenanceMode ? "§cEnabled" : "§aDisabled"));
         getLogger().info("▪ Crossplay: " + (floodgateActive ? "§aActive (Geyser/Floodgate)" : "§7Inactive"));
@@ -295,7 +300,7 @@ public class PeyajWhitelist extends JavaPlugin {
         }
 
         com.google.gson.JsonObject footer = new com.google.gson.JsonObject();
-        footer.addProperty("text", "PeyajWhitelist v4.1");
+        footer.addProperty("text", "PeyajWhitelist v4.2");
         embed.add("footer", footer);
 
         embeds.add(embed);
